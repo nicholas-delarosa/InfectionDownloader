@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InfectionDownloader</title>
+  <meta name="description" content="Descarga videos en MP4 o audio en MP3 de YouTube, X, Facebook, TikTok, Instagram y más. Gratis.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="spores" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <header class="hero">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><use href="#biohazard"/></svg>
+      </div>
+      <h1>Infection<span>Downloader</span></h1>
+      <p class="tag">Pega el enlace y descarga el video en MP4 o el audio en MP3, en la calidad que quieras.</p>
+    </header>
+
+    <form id="url-form" class="search" autocomplete="off">
+      <input id="url" type="url" inputmode="url" placeholder="https://youtube.com/watch?v=…" required aria-label="Enlace del video">
+      <button type="button" id="paste" class="ghost" title="Pegar del portapapeles">Pegar</button>
+      <button type="submit" id="analyze" class="primary">Analizar</button>
+    </form>
+
+    <p class="sites">YouTube · X / Twitter · Facebook · Instagram · TikTok · Reddit · Vimeo · Twitch · SoundCloud · +1000</p>
+
+    <div id="error" class="error" hidden></div>
+
+    <div id="loading" class="loading" hidden>
+      <span class="pulse"></span> Analizando enlace…
+    </div>
+
+    <section id="result" class="card" hidden>
+      <div class="media">
+        <div class="thumb">
+          <img id="thumb" alt="">
+          <span id="duration" class="dur"></span>
+        </div>
+        <div class="meta">
+          <span id="site" class="badge"></span>
+          <h2 id="title"></h2>
+          <p id="uploader"></p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" class="tab active" data-type="mp4" aria-selected="true">
+          <svg viewBox="0 0 24 24"><path d="M4 5h11a2 2 0 0 1 2 2v1.5l4-2.5v12l-4-2.5V17a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"/></svg>
+          MP4 · Video
+        </button>
+        <button type="button" role="tab" class="tab" data-type="mp3" aria-selected="false">
+          <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
+          MP3 · Audio
+        </button>
+      </div>
+
+      <div class="quality">
+        <span class="label" id="quality-label">Resolución</span>
+        <div id="options" class="chips"></div>
+        <p id="hint" class="hint"></p>
+      </div>
+
+      <button type="button" id="download" class="primary big">
+        <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 21h16"/></svg>
+        <span>Descargar</span>
+      </button>
+
+      <div id="progress" class="progress" hidden>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="pinfo"><span id="pstatus">En cola…</span><span id="pdetail"></span></div>
+      </div>
+    </section>
+
+    <footer>
+      <p>Uso personal. Descarga solo contenido propio o con permiso del autor y respeta los términos de cada plataforma.</p>
+    </footer>
+  </main>
+
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="biohazard" viewBox="0 0 64 64">
+      <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+        <circle cx="32" cy="34" r="6"/>
+        <path d="M32 28c-9-3-11-14-4-20M32 28c9-3 11-14 4-20"/>
+        <path d="M26.8 37c-7 6-18 3-21-6M26.8 37c-2 9 6 17 15 15"/>
+        <path d="M37.2 37c7 6 18 3 21-6M37.2 37c2 9-6 17-15 15"/>
+        <circle cx="32" cy="34" r="17" stroke-dasharray="6 9" opacity=".55"/>
+      </g>
+    </symbol>
+  </svg>
+
+  <script src="app.js"></script>
+</body>
+</html>
