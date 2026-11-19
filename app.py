@@ -31,14 +31,29 @@ jobs: dict[str, dict] = {}
 jobs_lock = threading.Lock()
 
 
+SECRET_COOKIE_PATHS = [Path("/etc/secrets/YTDLP_COOKIES"), Path("/etc/secrets/cookies.txt")]
+
+
 def _cookie_file() -> str | None:
-    """Permite pasar cookies (formato Netscape) por variable de entorno YTDLP_COOKIES."""
+    """Cookies (formato Netscape) desde la variable YTDLP_COOKIES o un Secret File de Render.
+
+    Se copian a una carpeta escribible porque yt-dlp actualiza el archivo al terminar
+    y /etc/secrets es de solo lectura.
+    """
+    path = WORK_DIR / "cookies.txt"
+    if path.exists():
+        return str(path)
     content = os.getenv("YTDLP_COOKIES", "").strip()
     if not content:
+        for secret in SECRET_COOKIE_PATHS:
+            if secret.is_file():
+                content = secret.read_text(encoding="utf-8", errors="ignore").strip()
+                break
+    if not content:
         return None
-    path = WORK_DIR / "cookies.txt"
-    if not path.exists():
-        path.write_text(content + "\n", encoding="utf-8")
+    if not content.startswith("# Netscape") and not content.startswith("# HTTP Cookie"):
+        content = "# Netscape HTTP Cookie File\n" + content
+    path.write_text(content + "\n", encoding="utf-8")
     return str(path)
 
 

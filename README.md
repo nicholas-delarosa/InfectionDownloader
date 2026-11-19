@@ -57,7 +57,7 @@ YouTube suele bloquear las IPs de servidores en la nube. Para solucionarlo:
 1. Instala en tu navegador la extensión **"Get cookies.txt LOCALLY"**.
 2. Inicia sesión en YouTube con una **cuenta secundaria** (no la principal).
 3. Exporta las cookies de youtube.com.
-4. Pega todo el contenido del archivo como secret `YTDLP_COOKIES` en Render (**Environment → Add Secret File / Environment Variable**).
+4. En Render ve a **Environment → Secret Files**, crea uno llamado `YTDLP_COOKIES` y pega el contenido del archivo. Exporta **solo** las cookies de youtube.com (no "Export All"): Render acepta máximo 500 KB y no conviene subir las sesiones de otros sitios.
 
 ---
 
