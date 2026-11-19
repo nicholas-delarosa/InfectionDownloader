@@ -1,13 +1,3 @@
----
-title: InfectionDownloader
-emoji: ☣️
-colorFrom: green
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # ☣️ InfectionDownloader
 
 Página web para descargar videos en **MP4** (eligiendo la resolución) o audio en **MP3** (eligiendo la calidad: 128, 192, 256 o 320 kbps) desde YouTube, X/Twitter, Facebook, Instagram, TikTok, Reddit, Vimeo, Twitch, SoundCloud y más de 1000 sitios.
@@ -38,28 +28,16 @@ docker run -p 7860:7860 infection-downloader
 
 ---
 
-## Desplegar gratis en Hugging Face Spaces (recomendado)
+## Desplegar gratis en Render
 
-Plan gratuito: 2 vCPU, 16 GB de RAM, sin tarjeta de crédito.
+1. Entra a https://render.com (puedes usar tu cuenta de GitHub).
+2. **New → Blueprint**, elige este repo o pega su URL pública.
+3. Dale a **Deploy Blueprint**. Render lee `render.yaml` y crea el servicio en el plan gratis (sin tarjeta).
 
-1. Crea una cuenta en https://huggingface.co
-2. Ve a **New → Space**, ponle de nombre `InfectionDownloader`, elige **Docker → Blank** y visibilidad **Public**.
-3. Crea un token con permiso **Write** en https://huggingface.co/settings/tokens
-4. En tu repo de GitHub entra a **Settings → Secrets and variables → Actions**:
-   - En **Secrets** crea `HF_TOKEN` con el token.
-   - En **Variables** crea `HF_SPACE` con `tu-usuario-hf/InfectionDownloader`.
-5. Haz push a `main` (o corre el workflow a mano en **Actions**). GitHub sube el código al Space y este se construye solo.
-
-Tu página queda en `https://tu-usuario-hf-infectiondownloader.hf.space`.
-
-El workflow también se ejecuta **cada lunes** para reconstruir con la última versión de yt-dlp, porque los sitios cambian seguido y yt-dlp se actualiza para seguirles el ritmo.
-
-## Alternativa: Render (gratis)
-
-1. Entra a https://render.com con tu cuenta de GitHub.
-2. **New → Blueprint** y elige este repo (usa `render.yaml`).
-
-Nota: en el plan gratis el servidor se apaga tras 15 minutos sin uso y tarda unos 50 segundos en volver a encender. Tiene 512 MB de RAM, así que los videos 4K largos pueden fallar.
+Notas del plan gratis:
+- El servidor se duerme tras 15 minutos sin uso; la primera visita después tarda ~50 segundos en despertar.
+- 512 MB de RAM: los videos 4K muy largos pueden fallar.
+- Para actualizar yt-dlp (cuando algún sitio deje de funcionar) entra al servicio en Render y usa **Manual Deploy → Clear build cache & deploy**.
 
 ---
 
@@ -79,7 +57,7 @@ YouTube suele bloquear las IPs de servidores en la nube. Para solucionarlo:
 1. Instala en tu navegador la extensión **"Get cookies.txt LOCALLY"**.
 2. Inicia sesión en YouTube con una **cuenta secundaria** (no la principal).
 3. Exporta las cookies de youtube.com.
-4. Pega todo el contenido del archivo como secret `YTDLP_COOKIES` en tu Space (**Settings → Variables and secrets → New secret**) o en Render (**Environment**).
+4. Pega todo el contenido del archivo como secret `YTDLP_COOKIES` en Render (**Environment → Add Secret File / Environment Variable**).
 
 ---
 
