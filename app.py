@@ -187,7 +187,11 @@ def get_info(req: InfoRequest):
     if not heights and info.get("height"):
         heights = [int(info["height"])]
 
-    has_video = bool(heights) or info.get("vcodec") not in (None, "none")
+    # Algunos sitios (p. ej. Facebook) no informan la resolución ni el códec de video
+    has_video = bool(heights) or any(
+        f.get("vcodec") != "none" and f.get("video_ext") != "none"
+        for f in info.get("formats") or [info]
+    )
     max_abr = max(
         [f.get("abr") or 0 for f in info.get("formats") or []] + [info.get("abr") or 0]
     )
@@ -312,7 +316,12 @@ def _run_job(job_id: str, url: str, kind: str, quality: int) -> None:
                     raise RuntimeError("El video es demasiado largo para este servidor.")
                 raise RuntimeError("No se generó el archivo. Prueba otra calidad.")
 
-            suffix = f" ({quality}p)" if kind == "mp4" else f" ({quality}kbps)"
+            if kind == "mp3":
+                suffix = f" ({quality}kbps)"
+            else:
+                height = info.get("height") or (
+                    max((f.get("height") or 0) for f in info.get("requested_formats") or [{}]) or None)
+                suffix = f" ({height}p)" if height else ""
             job["file"] = str(files[0])
             job["filename"] = _safe_filename(info.get("title")) + suffix + f".{kind}"
             job["size"] = files[0].stat().st_size

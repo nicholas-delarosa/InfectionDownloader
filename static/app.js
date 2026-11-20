@@ -77,8 +77,8 @@
     els.uploader.textContent = i.uploader;
 
     const mp4Tab = document.querySelector('.tab[data-type="mp4"]');
-    mp4Tab.disabled = !i.video_heights.length;
-    setType(i.video_heights.length ? "mp4" : "mp3");
+    mp4Tab.disabled = !i.has_video;
+    setType(i.has_video ? "mp4" : "mp3");
 
     els.progress.hidden = true;
     els.result.hidden = false;
@@ -100,9 +100,15 @@
     let list, def;
     if (state.type === "mp4") {
       els.qlabel.textContent = "Resolución";
-      list = i.video_heights.map((h) => ({ v: h, text: h + "p", sub: LABELS[h] }));
-      def = i.video_heights.find((h) => h <= 1080) || i.video_heights[0];
-      els.hint.textContent = "Las resoluciones mostradas son las que ofrece el video original.";
+      if (i.video_heights.length) {
+        list = i.video_heights.map((h) => ({ v: h, text: h + "p", sub: LABELS[h] }));
+        def = i.video_heights.find((h) => h <= 1080) || i.video_heights[0];
+        els.hint.textContent = "Las resoluciones mostradas son las que ofrece el video original.";
+      } else {
+        list = [{ v: 4320, text: "Mejor calidad", sub: "auto" }];
+        def = 4320;
+        els.hint.textContent = "Este sitio no informa las resoluciones; se descargará la mejor disponible.";
+      }
     } else {
       els.qlabel.textContent = "Calidad del audio";
       list = i.audio_bitrates.map((b) => ({ v: b, text: b + " kbps", sub: AUDIO_LABELS[b] }));
