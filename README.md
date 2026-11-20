@@ -51,14 +51,17 @@ Notas del plan gratis:
 | `JOB_TTL_SECONDS` | `900` | Borra archivos que nadie descargó (15 min) |
 | `YTDLP_COOKIES` | — | Contenido de un `cookies.txt` (ver abajo) |
 
-### YouTube bloqueado ("Sign in to confirm you're not a bot")
+### Sitios que piden iniciar sesión (YouTube, Reddit, Instagram...)
 
-YouTube suele bloquear las IPs de servidores en la nube. Para solucionarlo:
+YouTube bloquea las IPs de servidores en la nube y Reddit ya no deja usar su API sin cuenta. Se soluciona dándole al servidor cookies de una cuenta:
 
-1. Instala en tu navegador la extensión **"Get cookies.txt LOCALLY"**.
-2. Inicia sesión en YouTube con una **cuenta secundaria** (no la principal).
-3. Exporta las cookies de youtube.com.
-4. En Render ve a **Environment → Secret Files**, crea uno llamado `YTDLP_COOKIES` y pega el contenido del archivo. Exporta **solo** las cookies de youtube.com (no "Export All"): Render acepta máximo 500 KB y no conviene subir las sesiones de otros sitios.
+1. Instala en tu navegador la extensión **"Get cookies.txt LOCALLY"** y permítela en modo incógnito.
+2. Abre una **ventana de incógnito** e inicia sesión en el sitio con una **cuenta secundaria**.
+3. En esa ventana exporta las cookies **solo de ese sitio** (botón *Export*, no *Export All*).
+4. Cierra la ventana de incógnito **sin cerrar sesión** (así las cookies no se invalidan).
+5. En Render ve a **Environment → Secret Files** y crea un archivo por sitio: `YTDLP_COOKIES`, `REDDIT_COOKIES`, `INSTAGRAM_COOKIES`... (cualquier nombre que contenga `COOKIES`). El servidor los une solo.
+
+Las cookies caducan cada cierto tiempo; si un sitio vuelve a fallar, repite los pasos para ese sitio. Render acepta máximo 500 KB por archivo.
 
 ---
 

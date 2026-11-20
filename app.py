@@ -34,11 +34,24 @@ jobs: dict[str, dict] = {}
 jobs_lock = threading.Lock()
 
 
-SECRET_COOKIE_PATHS = [Path("/etc/secrets/YTDLP_COOKIES"), Path("/etc/secrets/cookies.txt")]
+SECRETS_DIR = Path("/etc/secrets")
+
+
+def _cookie_sources() -> list[str]:
+    """Todos los textos de cookies disponibles: variable YTDLP_COOKIES y cualquier
+    Secret File de Render cuyo nombre contenga "cookie" (YTDLP_COOKIES, REDDIT_COOKIES...)."""
+    sources = []
+    if os.getenv("YTDLP_COOKIES", "").strip():
+        sources.append(os.environ["YTDLP_COOKIES"])
+    if SECRETS_DIR.is_dir():
+        for secret in sorted(SECRETS_DIR.iterdir()):
+            if secret.is_file() and "cookie" in secret.name.lower():
+                sources.append(secret.read_text(encoding="utf-8", errors="ignore"))
+    return sources
 
 
 def _cookie_file() -> str | None:
-    """Cookies (formato Netscape) desde la variable YTDLP_COOKIES o un Secret File de Render.
+    """Une todas las cookies (formato Netscape) en un solo archivo.
 
     Se copian a una carpeta escribible porque yt-dlp actualiza el archivo al terminar
     y /etc/secrets es de solo lectura.
@@ -46,17 +59,16 @@ def _cookie_file() -> str | None:
     path = WORK_DIR / "cookies.txt"
     if path.exists():
         return str(path)
-    content = os.getenv("YTDLP_COOKIES", "").strip()
-    if not content:
-        for secret in SECRET_COOKIE_PATHS:
-            if secret.is_file():
-                content = secret.read_text(encoding="utf-8", errors="ignore").strip()
-                break
-    if not content:
+    lines: list[str] = []
+    for text in _cookie_sources():
+        for line in text.splitlines():
+            line = line.strip()
+            # "#HttpOnly_" es parte de la cookie, no un comentario
+            if line and (not line.startswith("#") or line.startswith("#HttpOnly_")):
+                lines.append(line)
+    if not lines:
         return None
-    if not content.startswith("# Netscape") and not content.startswith("# HTTP Cookie"):
-        content = "# Netscape HTTP Cookie File\n" + content
-    path.write_text(content + "\n", encoding="utf-8")
+    path.write_text("# Netscape HTTP Cookie File\n" + "\n".join(lines) + "\n", encoding="utf-8")
     return str(path)
 
 
@@ -80,6 +92,9 @@ def _clean_error(exc: Exception) -> str:
     msg = re.sub(r"^\[[^\]]+\]\s*[^:]*:\s*", "", msg)
     if "No video could be found" in msg or "no video" in msg.lower():
         return "No se encontró ningún video en ese enlace."
+    if "authentication is required" in msg or "--cookies" in msg or "login required" in msg.lower():
+        return ("Este sitio pide iniciar sesión para descargar. "
+                "El administrador debe configurar cookies de ese sitio (ver README).")
     if "Sign in to confirm" in msg or "not a bot" in msg:
         return ("YouTube bloqueó la petición desde este servidor. "
                 "Intenta de nuevo más tarde o configura cookies (ver README).")
