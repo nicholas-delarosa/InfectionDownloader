@@ -191,6 +191,43 @@ def get_info(req: InfoRequest):
     }
 
 
+# Si YouTube entrega enlaces rotos (403/404) con un cliente, se reintenta con otros.
+YOUTUBE_CLIENT_FALLBACKS = [
+    None,  # lo que yt-dlp elija por defecto
+    ["tv_samsung"],
+    ["web_safari"],
+    ["tv"],
+    ["mweb"],
+    ["web"],
+]
+
+
+def _is_youtube(url: str) -> bool:
+    return bool(re.search(r"(^|\.|//)(youtube\.com|youtu\.be|youtube-nocookie\.com)", url, re.I))
+
+
+def _download_with_fallback(url: str, opts: dict, out_dir: Path, job: dict) -> dict:
+    clients = YOUTUBE_CLIENT_FALLBACKS if _is_youtube(url) else [None]
+    last_exc: Exception | None = None
+    for client in clients:
+        attempt = dict(opts)
+        if client:
+            attempt["extractor_args"] = {"youtube": {"player_client": client}}
+        try:
+            with yt_dlp.YoutubeDL(attempt) as ydl:
+                return ydl.extract_info(url, download=True)
+        except yt_dlp.utils.DownloadError as exc:
+            last_exc = exc
+            print(f"[download] client={client or 'default'} failed: {exc}", flush=True)
+            if not re.search(r"HTTP Error (403|404)|Requested format is not available", str(exc)):
+                raise
+            for leftover in out_dir.iterdir():
+                leftover.unlink(missing_ok=True)
+            job["status"] = "starting"
+            job["progress"] = 0
+    raise last_exc  # type: ignore[misc]
+
+
 def _run_job(job_id: str, url: str, kind: str, quality: int) -> None:
     job = jobs[job_id]
     out_dir = Path(job["dir"])
@@ -250,8 +287,7 @@ def _run_job(job_id: str, url: str, kind: str, quality: int) -> None:
     with download_slots:
         job["status"] = "starting"
         try:
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(url, download=True)
+            info = _download_with_fallback(url, opts, out_dir, job)
             if info.get("_type") == "playlist":
                 info = next(e for e in info["entries"] if e)
 
