@@ -23,7 +23,10 @@ WORK_DIR.mkdir(parents=True, exist_ok=True)
 
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "2"))
 MAX_DURATION = int(os.getenv("MAX_DURATION_SECONDS", str(3 * 60 * 60)))
-JOB_TTL = int(os.getenv("JOB_TTL_SECONDS", str(30 * 60)))
+# Se borra este tiempo después de que el usuario descarga el archivo
+DELETE_AFTER_DOWNLOAD = int(os.getenv("DELETE_AFTER_DOWNLOAD_SECONDS", str(5 * 60)))
+# Respaldo: archivos que nadie descargó (o descargas abandonadas)
+JOB_TTL = int(os.getenv("JOB_TTL_SECONDS", str(15 * 60)))
 AUDIO_BITRATES = [128, 192, 256, 320]
 
 download_slots = threading.Semaphore(MAX_CONCURRENT)
@@ -93,16 +96,29 @@ def _safe_filename(name: str) -> str:
     return name[:120] or "video"
 
 
+def _is_expired(job: dict, now: float) -> bool:
+    if job["served_at"] is not None:
+        return now - job["served_at"] > DELETE_AFTER_DOWNLOAD
+    if job["status"] in ("done", "error"):
+        return now - (job["finished_at"] or job["created"]) > JOB_TTL
+    # Descarga en curso: solo se borra si quedó colgada muchísimo tiempo
+    return now - job["created"] > JOB_TTL * 4
+
+
 def _cleanup_loop() -> None:
     while True:
-        time.sleep(60)
+        time.sleep(30)
         now = time.time()
         with jobs_lock:
-            expired = [jid for jid, j in jobs.items() if now - j["created"] > JOB_TTL]
-            for jid in expired:
+            for jid in [jid for jid, j in jobs.items() if _is_expired(j, now)]:
                 shutil.rmtree(jobs[jid]["dir"], ignore_errors=True)
                 del jobs[jid]
 
+
+# Restos de una ejecución anterior (reinicios del servidor)
+for leftover in WORK_DIR.iterdir():
+    if leftover.is_dir():
+        shutil.rmtree(leftover, ignore_errors=True)
 
 threading.Thread(target=_cleanup_loop, daemon=True).start()
 
@@ -199,22 +215,34 @@ def _run_job(job_id: str, url: str, kind: str, quality: int) -> None:
         "progress_hooks": [hook],
         "postprocessor_hooks": [pp_hook],
         "match_filter": yt_dlp.utils.match_filter_func(f"duration <=? {MAX_DURATION}"),
+        # Miniatura como portada del archivo (galería, reproductor, explorador)
+        "writethumbnail": True,
     }
+    thumb_to_jpg = {"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"}
+    metadata = {"key": "FFmpegMetadata", "add_metadata": True}
+    embed_thumb = {"key": "EmbedThumbnail", "already_have_thumbnail": False}
 
     if kind == "mp4":
         opts |= {
             "format": "bv*+ba/b",
             "format_sort": [f"res:{quality}", "vcodec:h264", "acodec:aac", "ext:mp4:m4a"],
             "merge_output_format": "mp4",
-            "postprocessors": [{"key": "FFmpegVideoRemuxer", "preferedformat": "mp4"}],
+            "postprocessors": [
+                thumb_to_jpg,
+                {"key": "FFmpegVideoRemuxer", "preferedformat": "mp4"},
+                metadata,
+                embed_thumb,
+            ],
         }
     else:
         opts |= {
             "format": "ba/b",
             "postprocessors": [
+                thumb_to_jpg,
                 {"key": "FFmpegExtractAudio", "preferredcodec": "mp3",
                  "preferredquality": str(quality)},
-                {"key": "FFmpegMetadata"},
+                metadata,
+                embed_thumb,
             ],
         }
 
@@ -237,9 +265,11 @@ def _run_job(job_id: str, url: str, kind: str, quality: int) -> None:
             job["file"] = str(files[0])
             job["filename"] = _safe_filename(info.get("title")) + suffix + f".{kind}"
             job["size"] = files[0].stat().st_size
+            job["finished_at"] = time.time()
             job["status"] = "done"
             job["progress"] = 100
         except Exception as exc:  # noqa: BLE001
+            job["finished_at"] = time.time()
             job["status"] = "error"
             job["error"] = _clean_error(exc)
 
@@ -258,6 +288,7 @@ def start_download(req: DownloadRequest):
             "created": time.time(), "dir": str(job_dir), "status": "queued",
             "progress": 0, "speed": None, "eta": None, "error": None,
             "file": None, "filename": None, "size": None,
+            "finished_at": None, "served_at": None,
         }
     threading.Thread(target=_run_job, args=(job_id, url, req.type, req.quality),
                      daemon=True).start()
@@ -277,6 +308,9 @@ def get_file(job_id: str):
     job = jobs.get(job_id)
     if not job or job["status"] != "done" or not job["file"]:
         raise HTTPException(404, "Archivo no disponible.")
+    if job["served_at"] is None:
+        # Empieza la cuenta regresiva de borrado (se permite re-descargar mientras tanto)
+        job["served_at"] = time.time()
     media = "video/mp4" if job["file"].endswith(".mp4") else "audio/mpeg"
     return FileResponse(job["file"], media_type=media, filename=job["filename"])
 

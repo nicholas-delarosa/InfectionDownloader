@@ -47,7 +47,8 @@ Notas del plan gratis:
 |---|---|---|
 | `MAX_CONCURRENT_DOWNLOADS` | `2` | Descargas simultáneas |
 | `MAX_DURATION_SECONDS` | `10800` | Duración máxima del video (3 h) |
-| `JOB_TTL_SECONDS` | `1800` | Tiempo que se guardan los archivos antes de borrarse |
+| `DELETE_AFTER_DOWNLOAD_SECONDS` | `300` | Se borra el archivo del servidor 5 min después de descargarlo |
+| `JOB_TTL_SECONDS` | `900` | Borra archivos que nadie descargó (15 min) |
 | `YTDLP_COOKIES` | — | Contenido de un `cookies.txt` (ver abajo) |
 
 ### YouTube bloqueado ("Sign in to confirm you're not a bot")
